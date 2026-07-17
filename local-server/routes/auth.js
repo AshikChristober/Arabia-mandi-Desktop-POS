@@ -8,6 +8,7 @@ const express  = require('express');
 const bcrypt   = require('bcryptjs');
 const { getDb, now } = require('../db');
 const { signToken, authMiddleware } = require('../auth-helper');
+const { runSync } = require('../sync');
 
 const router = express.Router();
 
@@ -131,6 +132,9 @@ router.post('/login', async (req, res) => {
           VALUES (?, ?, ?, ?, ?)
         `).run(user.branchId || 'BR-01', user.branchName || 'Main Branch', 'MAIN', cloudToken, now());
       }
+
+      // Immediately pull master data (menu, tables, categories) so local SQLite is fully primed right away
+      await runSync().catch(e => console.warn('[Auth] Post-login sync error:', e.message));
 
       // Issue a local token (same payload, local secret)
       const localToken = signToken({
