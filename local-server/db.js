@@ -321,6 +321,7 @@ function runMigrations() {
   } catch (err) {
     console.error('[DB] Error seeding offline accounts:', err.message);
   }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
