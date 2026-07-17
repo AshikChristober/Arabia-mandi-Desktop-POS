@@ -1,0 +1,12 @@
+node_modules/
+dist-electron/
+dist/
+receptionist-frontend/dist/
+local-server/qa-test-data/
+*.db
+*.db-shm
+*.db-wal
+.env
+*.log
+.DS_Store
+Thumbs.db

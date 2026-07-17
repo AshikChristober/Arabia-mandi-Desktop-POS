@@ -1,0 +1,116 @@
+{
+  "name": "petpooja-desktop",
+  "version": "1.0.0",
+  "description": "Petpooja POS Desktop Application — Offline-first branch client",
+  "author": "Ashik Christober <ashik@petpooja.com>",
+  "homepage": "https://github.com/Crack-Developers/Arabia_mandi_OrderingTool_FrontEnd",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "dev": "ELECTRON_DEV=true electron . --no-sandbox",
+    "postinstall": "npx @electron/rebuild -f -w better-sqlite3",
+    "build:frontend": "cd ../receptionist-frontend && npm run build",
+    "build:all": "npm run build:frontend && npm run dist",
+    "dist": "electron-builder --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never",
+    "pack": "electron-builder --dir"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^2.7.0",
+    "socket.io": "^4.7.4",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
+    "socket.io-client": "^4.8.3"
+  },
+  "build": {
+    "appId": "com.petpooja.desktop",
+    "productName": "Petpooja POS",
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node",
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "local-server/**/*",
+      "node_modules/**/*",
+      "!node_modules/.cache",
+      "!node_modules/.bin"
+    ],
+    "extraResources": [
+      {
+        "from": "../receptionist-frontend/dist",
+        "to": "frontend-dist"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "public.app-category.business"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Office",
+      "maintainer": "Ashik Christober <ashik@petpooja.com>",
+      "executableArgs": [
+        "--no-sandbox"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Petpooja POS"
+    },
+    "dmg": {
+      "title": "Petpooja POS Installer"
+    }
+  }
+}
