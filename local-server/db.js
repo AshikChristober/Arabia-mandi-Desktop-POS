@@ -295,8 +295,6 @@ function runMigrations() {
   safeAlter("ALTER TABLE order_items ADD COLUMN kot_sequence INTEGER DEFAULT 1");
   safeAlter("ALTER TABLE order_items ADD COLUMN created_at TEXT DEFAULT (datetime('now'))");
 
-  // Seed default offline accounts if no staff exists
-  try {
   // Always seed default offline accounts using INSERT OR IGNORE so local POS login works offline right away
   try {
     const bcrypt = require('bcryptjs');
@@ -323,7 +321,6 @@ function runMigrations() {
   } catch (err) {
     console.error('[DB] Error seeding offline accounts:', err.message);
   }
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
