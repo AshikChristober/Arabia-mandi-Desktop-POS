@@ -236,7 +236,7 @@ async function runSync() {
 async function checkOnline() {
   try {
     const fetch = require('node-fetch');
-    const res   = await fetch(`${CLOUD_API}/health`, { method: 'GET', timeout: 4000 });
+    const res   = await fetch(`${CLOUD_API.replace('/api/v1', '/api')}/health`, { method: 'GET', timeout: 4000 });
     if (res.ok || res.status < 500) return true;
   } catch {}
 

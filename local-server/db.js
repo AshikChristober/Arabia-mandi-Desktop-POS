@@ -297,21 +297,29 @@ function runMigrations() {
 
   // Seed default offline accounts if no staff exists
   try {
-    const count = db.prepare('SELECT COUNT(*) as c FROM staff').get();
-    if (!count || count.c === 0) {
-      const bcrypt = require('bcryptjs');
-      const adminHash = bcrypt.hashSync('admin123', 10);
-      const receptionHash = bcrypt.hashSync('reception123', 10);
-      db.prepare(`
-        INSERT OR IGNORE INTO staff (_id, branch_id, name, role, username, password_hash, email, branchAccess, active, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-      `).run('STAFF-ADMIN-001', 'BRANCH-QA-100', 'Super Admin', 'Super Admin', 'admin', adminHash, 'admin@arabiamandi.com', 'All Branches');
-      db.prepare(`
-        INSERT OR IGNORE INTO staff (_id, branch_id, name, role, username, password_hash, email, branchAccess, active, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-      `).run('STAFF-REC-001', 'BRANCH-QA-100', 'Receptionist POS', 'Receptionist', 'reception', receptionHash, 'reception@arabiamandi.com', 'Single Branch');
-      console.log('[DB] Seeded default offline accounts (admin/admin123 and reception/reception123)');
-    }
+  // Always seed default offline accounts using INSERT OR IGNORE so local POS login works offline right away
+  try {
+    const bcrypt = require('bcryptjs');
+    const adminHash = bcrypt.hashSync('admin123', 10);
+    const receptionHash = bcrypt.hashSync('reception123', 10);
+    const imranHash = bcrypt.hashSync('imran123', 10);
+    const tariqHash = bcrypt.hashSync('POS#Tariq2026', 10);
+    const rameshHash = bcrypt.hashSync('Mandi#Ramesh99', 10);
+    const johnHash = bcrypt.hashSync('Jubilee@2026', 10);
+
+    const seedStaff = db.prepare(`
+      INSERT OR IGNORE INTO staff (_id, branch_id, name, role, username, password_hash, email, branchAccess, active, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+    `);
+
+    seedStaff.run('STAFF-ADMIN-001', 'BRANCH-QA-100', 'Super Admin', 'Super Admin', 'admin', adminHash, 'admin@arabiamandi.com', 'All Branches');
+    seedStaff.run('STAFF-REC-001', 'BRANCH-QA-100', 'Receptionist POS', 'Receptionist', 'reception', receptionHash, 'reception@arabiamandi.com', 'Single Branch');
+    seedStaff.run('STAFF-IMRAN-001', 'BR-BANJARA', 'Imran Qureshi', 'Manager', 'imran', imranHash, 'imran@arabiamandi.com', 'All Branches');
+    seedStaff.run('STAFF-TARIQ-001', 'BR-JUBILEE', 'Mohammed Tariq', 'Receptionist', 'tariq.pos', tariqHash, 'tariq.reception@arabiamandi.com', 'Single Branch');
+    seedStaff.run('STAFF-RAMESH-001', 'BR-BANJARA', 'Ramesh Cashier', 'Cashier', 'ramesh.cashier', rameshHash, 'ramesh.cashier@arabiamandi.com', 'Single Branch');
+    seedStaff.run('STAFF-JOHN-001', 'BR-JUBILEE', 'John Doe Manager', 'Manager', 'john.manager', johnHash, 'johndoe@arabianmandi.com', 'All Branches');
+
+    console.log('[DB] Seeded offline accounts (admin, reception, imran, tariq.pos, ramesh.cashier, john.manager)');
   } catch (err) {
     console.error('[DB] Error seeding offline accounts:', err.message);
   }

@@ -95,7 +95,7 @@ router.post('/login', async (req, res) => {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ username: username.trim(), password: password.trim() }),
-        timeout: 5000,
+        timeout: 25000,
       });
 
       if (!cloudRes.ok) {
