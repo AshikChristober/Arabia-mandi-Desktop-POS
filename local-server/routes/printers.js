@@ -212,10 +212,15 @@ router.post('/dispatch-kot', async (req, res) => {
 
 function fmt(p) {
   return {
-    _id: p._id, name: p.name, ip: p.ip, port: p.port||9100,
-    type: p.type||'thermal', duty: p.duty||'KOT', role: p.role||'kitchen',
-    sections: JSON.parse(p.sections||'["ALL"]'),
-    branchId: p.branch_id, isActive: p.isActive===1,
+    _id: p._id, name: p.name,
+    // ip column is canonical; ip_address is legacy fallback
+    ip: p.ip || p.ip_address || '',
+    port: p.port || 9100,
+    type: p.type || 'thermal', duty: p.duty || 'KOT', role: p.role || 'kitchen',
+    sections: JSON.parse(p.sections || '["ALL"]'),
+    branchId: p.branch_id,
+    // isActive is canonical; is_active is legacy fallback
+    isActive: p.isActive === 1 || p.is_active === 1,
   };
 }
 

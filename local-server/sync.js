@@ -60,36 +60,46 @@ async function pullFromCloud(db) {
         if (cRes.ok) {
           const cData = await cRes.json();
           const cats = Array.isArray(cData) ? cData : (cData?.data || cData?.categories || []);
-          const cStmt = db.prepare(`INSERT OR REPLACE INTO categories (_id, branchId, name, sortOrder, isActive, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`);
+          // Correct column names: branch_id, sort_order (matching db.js schema)
+          const cStmt = db.prepare(`INSERT OR REPLACE INTO categories (_id, branch_id, name, sort_order, updated_at) VALUES (?, ?, ?, ?, datetime('now'))`);
           for (const c of cats) {
-            if (c?._id) cStmt.run(String(c._id), String(bid), c.name || 'Category', c.sortOrder || 0, c.isActive === false ? 0 : 1);
+            if (c?._id) cStmt.run(String(c._id), String(bid), c.name || 'Category', c.sortOrder || c.sort_order || 0);
           }
         }
-      } catch {}
+      } catch (e) { console.warn('[Sync] Categories pull error:', e.message); }
+
       // Pull Menu Items
       try {
         const mRes = await fetch(`${CLOUD_API}/menu/items?branchId=${bid}`, { timeout: 4000 });
         if (mRes.ok) {
           const mData = await mRes.json();
           const items = Array.isArray(mData) ? mData : (mData?.data || mData?.menuItems || []);
-          const mStmt = db.prepare(`INSERT OR REPLACE INTO menu_items (_id, branchId, categoryId, name, price, variantName, dietaryType, isAvailable, sortOrder, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`);
+          // Correct column names: branch_id, category_id, available (matching db.js schema)
+          const mStmt = db.prepare(`INSERT OR REPLACE INTO menu_items (_id, branch_id, category_id, name, price, available, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`);
           for (const it of items) {
-            if (it?._id) mStmt.run(String(it._id), String(bid), String(it.categoryId || ''), it.name || 'Dish', Number(it.price) || 0, it.variantName || 'Regular', it.dietaryType || 'veg', it.isAvailable === false ? 0 : 1, it.sortOrder || 0);
+            if (!it?._id) continue;
+            const catId = it.categoryId || it.category_id || '';
+            const avail = (it.isAvailable === false || it.available === false || it.available === 0) ? 0 : 1;
+            mStmt.run(String(it._id), String(bid), String(catId), it.name || 'Dish', Number(it.price) || 0, avail);
           }
         }
-      } catch {}
+      } catch (e) { console.warn('[Sync] Menu items pull error:', e.message); }
+
       // Pull Tables
       try {
         const tRes = await fetch(`${CLOUD_API}/tables?branchId=${bid}`, { timeout: 4000 });
         if (tRes.ok) {
           const tData = await tRes.json();
           const tables = Array.isArray(tData) ? tData : (tData?.data || tData?.tables || []);
-          const tStmt = db.prepare(`INSERT OR REPLACE INTO tables (_id, branchId, sectionId, sectionName, tableNumber, capacity, status, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`);
+          // Correct column names: branch_id, section_id (matching db.js schema)
+          const tStmt = db.prepare(`INSERT OR REPLACE INTO tables (_id, branch_id, section_id, sectionName, tableNumber, capacity, status, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`);
           for (const tb of tables) {
-            if (tb?._id) tStmt.run(String(tb._id), String(bid), String(tb.sectionId || 'sec-1'), tb.sectionName || 'Dining Hall', tb.tableNumber || 'TBL', Number(tb.capacity) || 4, tb.status || 'Available');
+            if (!tb?._id) continue;
+            const secId = tb.sectionId || tb.section_id || 'sec-1';
+            tStmt.run(String(tb._id), String(bid), String(secId), tb.sectionName || 'Dining Hall', tb.tableNumber || 'TBL', Number(tb.capacity) || 4, tb.status || 'Available');
           }
         }
-      } catch {}
+      } catch (e) { console.warn('[Sync] Tables pull error:', e.message); }
     }
   } catch (err) {
     console.warn('[Sync] Pull error:', err.message);

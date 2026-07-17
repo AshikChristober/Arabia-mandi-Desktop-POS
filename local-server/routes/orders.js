@@ -311,8 +311,13 @@ function enrichOrder(db, o) {
     createdAt:   o.created_at,
     updatedAt:   o.updated_at,
     items:       items.map(i => ({
-      _id: i._id, menuItemId: i.menu_item_id, name: i.name,
-      price: i.price, qty: i.qty, notes: i.notes, kotPrinted: i.kot_printed === 1,
+      _id: i._id,
+      menuItemId: i.menu_item_id || i.menuItemId || i.menuItem_id || '',
+      name: i.name,
+      price: i.price,
+      qty: i.qty || i.quantity || 1,
+      notes: i.notes,
+      kotPrinted: i.kot_printed === 1,
     })),
     kots: kots.map(k => ({
       _id: k._id, kotNumber: k.kotNumber,
