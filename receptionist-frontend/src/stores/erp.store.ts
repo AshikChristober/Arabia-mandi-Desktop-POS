@@ -1271,24 +1271,46 @@ export const useERPStore = create<ERPState>()(
       // ── Step 2: Generate bill (idempotent — safe if already exists) ───────
       let dbBillId: string | undefined = order.dbBillId;
       let billNumber: string | undefined = order.billNumber;
-      if (!dbBillId) {
+      if (!dbBillId || dbBillId === dbOrderId || dbBillId.startsWith('ORD-') || dbBillId.startsWith('#ORD')) {
         // billRes is the unwrapped bill object
         const billRes = await orderApi.generateBill(
           dbOrderId,
           order.branchId || branch?._id || 'BR-MAIN'
         ) as any;
-        if (!billRes?._id) throw new Error('Bill could not be generated. Please try again.');
-        dbBillId = billRes._id;
-        billNumber = billRes.billNumber;
+        const actualBill = billRes?.bill || (billRes?._id && (billRes?.orderId || billRes?.order_id) ? billRes : null) || billRes;
+        if (!actualBill?._id) throw new Error('Bill could not be generated. Please try again.');
+        dbBillId = actualBill._id;
+        billNumber = actualBill.billNumber || billRes?.billNumber;
       }
 
       // ── Step 3: Process payment → DB: order=Completed, bill=Paid ─────────
-      await orderApi.processPayment(dbBillId!, {
-        cash:  paymentMethods.cash,
-        card:  paymentMethods.card,
-        upi:   paymentMethods.upi,
-        other: paymentMethods.other || 0,
-      } as any);
+      const doPayment = async (targetBillId: string) => {
+        return orderApi.processPayment(targetBillId, {
+          cash:  paymentMethods.cash,
+          card:  paymentMethods.card,
+          upi:   paymentMethods.upi,
+          other: paymentMethods.other || 0,
+        } as any);
+      };
+
+      try {
+        await doPayment(dbBillId!);
+      } catch (payErr: any) {
+        if (payErr?.message?.toLowerCase().includes('bill not found') || payErr?.statusCode === 404) {
+          console.warn('[settleOrder] Bill not found during payment, regenerating bill and retrying...');
+          const billRes = await orderApi.generateBill(
+            dbOrderId,
+            order.branchId || branch?._id || 'BR-MAIN'
+          ) as any;
+          const actualBill = billRes?.bill || (billRes?._id && (billRes?.orderId || billRes?.order_id) ? billRes : null) || billRes;
+          if (!actualBill?._id) throw new Error('Bill could not be regenerated.');
+          dbBillId = actualBill._id;
+          billNumber = actualBill.billNumber || billRes?.billNumber;
+          await doPayment(dbBillId!);
+        } else {
+          throw payErr;
+        }
+      }
 
       // ── Step 4: [Skipped, was building bill receipt data which is no longer used] ─────────
 

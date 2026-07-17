@@ -173,24 +173,30 @@ router.post('/:id/bill', (req, res) => {
     const order   = db.prepare('SELECT * FROM orders WHERE _id = ?').get(orderId);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    const billId = uuidv4();
-    db.prepare(`
-      INSERT INTO bills (_id, order_id, branch_id, subtotal, tax, discount, total, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'unpaid', ?)
-    `).run(billId, orderId, order.branch_id, order.subtotal, order.tax, order.discount, order.total, now());
+    let bill = db.prepare("SELECT * FROM bills WHERE order_id = ? ORDER BY created_at DESC LIMIT 1").get(orderId);
+    let billId;
+    if (bill) {
+      billId = bill._id;
+    } else {
+      billId = uuidv4();
+      db.prepare(`
+        INSERT INTO bills (_id, order_id, branch_id, subtotal, tax, discount, total, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'unpaid', ?)
+      `).run(billId, orderId, order.branch_id, order.subtotal, order.tax, order.discount, order.total, now());
+      bill = db.prepare('SELECT * FROM bills WHERE _id = ?').get(billId);
+      logSync('bills', billId, 'INSERT', bill);
+    }
 
     db.prepare("UPDATE orders SET status = 'billed', updated_at = ? WHERE _id = ?").run(now(), orderId);
 
-    const bill  = db.prepare('SELECT * FROM bills WHERE _id = ?').get(billId);
-    const full  = enrichOrder(db, db.prepare('SELECT * FROM orders WHERE _id = ?').get(orderId));
-    logSync('bills', billId, 'INSERT', bill);
+    const full = enrichOrder(db, db.prepare('SELECT * FROM orders WHERE _id = ?').get(orderId));
     broadcastOrderUpdate(req.io, full);
     if (req.io) {
       req.io.to(`branch_${order.branch_id}`).emit('bill:generated', bill);
       req.io.emit('bill:generated', bill);
     }
 
-    res.json({ success: true, data: { ...full, bill } });
+    res.json({ success: true, data: { ...bill, order: full, bill } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
