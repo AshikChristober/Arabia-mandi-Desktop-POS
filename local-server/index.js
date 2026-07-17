@@ -86,14 +86,15 @@ async function createLocalServer(port) {
 
         if (Array.isArray(data.items)) {
           const insertItem = db.prepare(`
-            INSERT INTO order_items (_id, order_id, menuItem_id, name, variantName, price, quantity, notes, kot_sequence, kot_printed, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO order_items (_id, order_id, menuItem_id, name, variantName, price, quantity, qty, notes, kot_sequence, kot_printed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `);
           for (const item of data.items) {
+            const q = item.quantity || item.qty || 1;
             insertItem.run(
               uuidv4(), _id, item.menuItemId || item.menuItem_id || '',
               item.name || '', item.variantName || 'Regular',
-              item.price || 0, item.quantity || 1, item.notes || '',
+              item.price || 0, q, q, item.notes || '',
               item.kotSequence || 1, item.kotPrinted || 0, now(), now()
             );
           }

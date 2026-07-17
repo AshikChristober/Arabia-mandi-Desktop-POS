@@ -25,7 +25,7 @@ router.get('/stats', (req, res) => {
     const occupied= db.prepare("SELECT COUNT(*) as c FROM tables WHERE status='Occupied'" + (branchId ? ' AND branch_id=?' : '')).get(...(branchId?[branchId]:[]));
 
     const topItems= db.prepare(`
-      SELECT oi.name, SUM(oi.qty) as qty, SUM(oi.price*oi.qty) as revenue
+      SELECT oi.name, SUM(COALESCE(oi.quantity, oi.qty, 1)) as qty, SUM(oi.price*COALESCE(oi.quantity, oi.qty, 1)) as revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id=o._id
       WHERE o.status='completed' AND date(o.created_at)=? ${where}
@@ -61,7 +61,7 @@ router.get('/dish-summary', (req, res) => {
     const where    = branchId ? 'AND o.branch_id=?' : '';
 
     const items = db.prepare(`
-      SELECT oi.name, SUM(oi.qty) as qty, SUM(oi.price*oi.qty) as revenue
+      SELECT oi.name, SUM(COALESCE(oi.quantity, oi.qty, 1)) as qty, SUM(oi.price*COALESCE(oi.quantity, oi.qty, 1)) as revenue
       FROM order_items oi JOIN orders o ON oi.order_id=o._id
       WHERE date(o.created_at)=? ${where}
       GROUP BY oi.name ORDER BY qty DESC
