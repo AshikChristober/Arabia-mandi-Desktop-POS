@@ -180,7 +180,7 @@ async function createLocalServer(port) {
 
   // ── Routes (all under /api/v1 to mirror cloud backend) ────────────────────
   app.use('/api/v1/auth',          authRoutes);
-  app.use('/api/v1/branches',      authMiddleware, branchRoutes);
+  app.use('/api/v1/branches',      branchRoutes);   // public — needed before login to populate dropdown
   app.use('/api/v1/staff',         authMiddleware, staffRoutes);
   app.use('/api/v1/sections',      authMiddleware, sectionRoutes);
   app.use('/api/v1/tables',        authMiddleware, tableRoutes);
