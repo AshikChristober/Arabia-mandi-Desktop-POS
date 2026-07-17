@@ -99,20 +99,30 @@ router.post('/items', (req, res) => {
   try {
     const db   = getDb();
     const _id  = uuidv4();
-    const body = req.body;
+    const body = req.body || {};
+    const branchId   = body.branchId || req.user?.branchId || null;
+    const categoryId = body.categoryId || body.category_id || null;
+    const name       = body.name || 'Dish';
+    const price      = body.price !== undefined && body.price !== null
+      ? Number(body.price)
+      : (Array.isArray(body.variants) && body.variants[0]?.price != null ? Number(body.variants[0].price) : 0);
+
     db.prepare(`
       INSERT INTO menu_items (_id, branch_id, category_id, name, price, available, updated_at)
       VALUES (?, ?, ?, ?, ?, 1, ?)
     `).run(
       _id,
-      body.branchId || req.user?.branchId,
-      body.categoryId || body.category_id || '',
-      body.name, body.price, now()
+      branchId,
+      categoryId,
+      name,
+      price,
+      now()
     );
     const item = db.prepare('SELECT * FROM menu_items WHERE _id = ?').get(_id);
     logSync('menu_items', _id, 'INSERT', formatItem(item));
     res.status(201).json({ success: true, data: formatItem(item) });
   } catch (err) {
+    console.error('[Menu API] POST /items error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -120,21 +130,32 @@ router.post('/items', (req, res) => {
 router.put('/items/:id', (req, res) => {
   try {
     const db   = getDb();
-    const body = req.body;
+    const body = req.body || {};
     const id   = req.params.id;
+    const existing = db.prepare('SELECT * FROM menu_items WHERE _id = ?').get(id);
+    if (!existing) return res.status(404).json({ success: false, message: 'Item not found' });
+
+    const name       = body.name !== undefined && body.name !== null ? body.name : existing.name;
+    const price      = body.price !== undefined && body.price !== null
+      ? Number(body.price)
+      : (Array.isArray(body.variants) && body.variants[0]?.price != null ? Number(body.variants[0].price) : existing.price);
+    const categoryId = (body.categoryId || body.category_id) !== undefined && (body.categoryId || body.category_id) !== null ? (body.categoryId || body.category_id) : existing.category_id;
+    const available  = body.available !== undefined && body.available !== null ? (body.available ? 1 : 0) : existing.available;
+
     db.prepare(`
       UPDATE menu_items SET
-        name        = COALESCE(?, name),
-        price       = COALESCE(?, price),
-        category_id = COALESCE(?, category_id),
-        available   = COALESCE(?, available),
+        name        = ?,
+        price       = ?,
+        category_id = ?,
+        available   = ?,
         updated_at  = ?
       WHERE _id = ?
-    `).run(body.name, body.price, body.categoryId || body.category_id, body.available !== undefined ? (body.available ? 1 : 0) : null, now(), id);
+    `).run(name, price, categoryId, available, now(), id);
     const item = db.prepare('SELECT * FROM menu_items WHERE _id = ?').get(id);
     if (item) logSync('menu_items', id, 'UPDATE', formatItem(item));
     res.json({ success: true, data: item ? formatItem(item) : null });
   } catch (err) {
+    console.error('[Menu API] PUT /items error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -166,14 +187,20 @@ router.patch('/items/:id/availability', (req, res) => {
 });
 
 function formatItem(i) {
+  if (!i) return null;
+  const priceNum = Number(i.price) || 0;
   return {
     _id:         i._id,
-    name:        i.name,
-    price:       i.price,
-    categoryId:  i.category_id,
+    name:        i.name || '',
+    price:       priceNum,
+    categoryId:  i.category_id || '',
     categoryName:i.categoryName || '',
-    branchId:    i.branch_id,
+    branchId:    i.branch_id || null,
     available:   i.available === 1,
+    active:      true,
+    description: '',
+    variants:    [{ name: 'Regular', price: priceNum }],
+    addons:      [],
   };
 }
 
